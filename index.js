@@ -3,8 +3,8 @@ var url = require('url');
 var formidable = require("formidable");
 var path = require('path');
 var fs = require('fs');
-const { fork } = require('child_process' );
 const express = require('express');
+const ImageProcess = require('./processImage');
 
 
 var port = 8083
@@ -30,20 +30,14 @@ app.post('/post', function(req, res){
 
         fs.rename(oldpath, newpath, function (err) {
             if (err) throw err;
-            const child2 = fork(pathUrl);
-            child2.send(newpath);
-  
-            child2.on('message', output =>{
-                const processedimg = __dirname + '/' + output.url ;
-                fs.readFile(processedimg, function(err, data){
-                    if(err){
-                        console.log("error ocuured", err);
-                    } else{
-                        res.writeHead(200, {'content-Type': 'image/jpeg'});
-                        res.write(data);
-                    }
-                });
-           });
+
+            const img = ImageProcess.convertImage(newpath)
+            fs.readFile(img, function(err, data){
+                if(err) throw err
+                res.writeHead(200, {'content-Type': 'image/jpeg'});
+                res.write(data);
+                
+            });
 
         });
 

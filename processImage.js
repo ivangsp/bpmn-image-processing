@@ -1,11 +1,11 @@
 var path = require('path');
 var Jimp = require("jimp");
 
-var new_img =  'img2';
+var new_img =  '/img2';
 class ImageProcess{
 
     convertImage(img){
-        new_img = new_img  + path.extname(img);
+        new_img = __dirname + new_img  + path.extname(img);
        // open a file called "lenna.png"
         Jimp.read(img, function (err, lenna) {
             if (err) throw err;

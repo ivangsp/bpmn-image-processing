@@ -4,7 +4,10 @@ var formidable = require("formidable");
 var path = require('path');
 var fs = require('fs');
 const express = require('express');
-const ImageProcess = require('./processImage');
+var Jimp = require("jimp");
+const { performance } = require('perf_hooks');
+
+
 
 
 var port = 8083
@@ -21,6 +24,8 @@ app.get('/', function(req, res){
 
 // process an image
 app.post('/post', function(req, res){
+    var t1 = performance.now();
+
     const pathUrl = currentFolder + '/processImage.js'
 
     var form = new formidable.IncomingForm();
@@ -31,13 +36,27 @@ app.post('/post', function(req, res){
         fs.rename(oldpath, newpath, function (err) {
             if (err) throw err;
 
-            const img = ImageProcess.convertImage(newpath)
-            fs.readFile(img, function(err, data){
-                if(err) throw err
-                res.writeHead(200, {'content-Type': 'image/jpeg'});
-                res.write(data);
+            // const img = ImageProcess.convertImage(newpath)
+            Jimp.read(newpath, function (err, lenna) {
+                if (err) throw err;
+               lenna.resize(256, 256)            // resize
+                    .quality(60)                 // set JPEG quality
+                    .greyscale()                 // set greyscale
+                    .write(__dirname + "/new.jpg", function(err, data1){
+                        
+                        fs.readFile(__dirname + "/new.jpg", function(err, data){
+                            var t2 = performance.now();
+                            console.log("the time taken to process an image took " + (t2-t1) + "milliseconds")
+                            if(err) throw err
+                            res.writeHead(200, {'content-Type': 'image/jpg'});
+                            res.write(data);
                 
+                        });
+                    });            
+
             });
+
+            
 
         });
 

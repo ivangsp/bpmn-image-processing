@@ -15,10 +15,14 @@ const currentFolder = __dirname;
 
 const app = express();
 
-app.get('/', function(req, res){  
+app.get('/home', function(req, res){  
     // send html form
     res.sendFile(path.join(currentFolder + '/form.html'))
 
+});
+
+app.get('/', function(req, res) {
+    res.send("Hello world");
 });
 
 // process an image
@@ -65,9 +69,9 @@ app.post('/post', function(req, res){
 
 
 app.listen(process.env.PORT || 3000, function(){
-    console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
+    // console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
   });
-  
+
 // var n = require('os').networkInterfaces()
 
 // var myIp = module.exports = function () {

@@ -4,7 +4,8 @@
   "description": "image processing on small devices(IOT)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -21,4 +22,5 @@
     "formidable": "^1.2.1",
     "jimp": "^0.2.28"
   }
+ 
 }

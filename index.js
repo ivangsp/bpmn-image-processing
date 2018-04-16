@@ -10,7 +10,6 @@ const  {performance}  = require('perf_hooks');
 
 
 
-var port = 8083
 const currentFolder = __dirname;
 
 
@@ -68,6 +67,7 @@ app.post('/post', function(req, res){
 app.listen(process.env.PORT || 3000, function(){
     console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
   });
+  
 // var n = require('os').networkInterfaces()
 
 // var myIp = module.exports = function () {

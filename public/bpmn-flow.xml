@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.11.3">
+  <bpmn:process id="gateway2" name="gateway2" isExecutable="true">
+    <bpmn:parallelGateway id="g1" name="gateway1">
+      <bpmn:incoming>startProcessingTogateway1</bpmn:incoming>
+      <bpmn:outgoing>gateway1todownloadImg</bpmn:outgoing>
+      <bpmn:outgoing>gate1toDownloadModule</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="gateway1todownloadImg" name="gateway1todownloadImg" sourceRef="g1" targetRef="downloadImg" />
+    <bpmn:scriptTask id="downloadImg" name="downloadImg" scriptFormat="Javascript">
+      <bpmn:incoming>gateway1todownloadImg</bpmn:incoming>
+      <bpmn:outgoing>DownloadImgToGateWay2</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+
+          const self = this;
+          const https  = services.https;
+          const fs = services.fs
+          var url = 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&h=350';
+
+          https.request(url, function(response) {
+              var data = ''
+              response.setEncoding('binary');
+
+            response.on('data', function(chunk) {
+              data += chunk;
+            });
+
+            response.on('end', function() {
+                fs.writeFile('logo2.png',data, 'binary', function(err, resp){
+                    if (err) throw err;
+                    self.variables.finishedDownloadingImg = true
+                    });
+
+                next(null, {result: null});
+            });
+          }).end()
+          ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="gate1toDownloadModule" name="gate1toDownloadModule" sourceRef="g1" targetRef="DownloadModule" />
+    <bpmn:scriptTask id="DownloadModule" name="DownloadModule" scriptFormat="Javascript">
+      <bpmn:incoming>gate1toDownloadModule</bpmn:incoming>
+      <bpmn:outgoing>DownloadModuleToGateway2</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+            const AdmZip = services.AdmZip;
+
+            const self = this;
+            const https  = services.https;
+            const fs = services.fs
+            var url = 'https://owncloud.ut.ee/owncloud/index.php/s/sdFU34YhTya2Fpi/download';
+
+            https.request(url, function(response) {
+                const rootDir = self.variables.rootDir;
+              var tmpFilePath = rootDir + '/tmp' + '/jimp';
+              response.on('data', function(data) {
+                fs.appendFileSync(tmpFilePath, data)
+              });
+
+              response.on('end', function() {
+                var zip = new AdmZip(tmpFilePath);
+                zip.extractAllTo(rootDir + '/downloaded_modules', true);
+                fs.unlink(tmpFilePath)
+                self.variables.finishedDownloadingModule = true,
+                next(null, {result: null});
+              });
+            }).end();
+        ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="gat">
+      <bpmn:incoming>DownloadImgToGateWay2</bpmn:incoming>
+      <bpmn:incoming>DownloadModuleToGateway2</bpmn:incoming>
+      <bpmn:outgoing>gateway2ToProcessImage</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="DownloadImgToGateWay2" name="DownloadImgToGateWay2" sourceRef="downloadImg" targetRef="gat" />
+    <bpmn:sequenceFlow id="DownloadModuleToGateway2" name="DownloadModuleToGateway2" sourceRef="DownloadModule" targetRef="gat" />
+    <bpmn:startEvent id="StartEvent_1" name="StartEvent_1">
+      <bpmn:outgoing>SequenceFlow_00pz8f2</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_00pz8f2" sourceRef="StartEvent_1" targetRef="startProcessing" />
+    <bpmn:sequenceFlow id="startProcessingTogateway1" name="startProcessingTogateway1" sourceRef="startProcessing" targetRef="g1" />
+    <bpmn:scriptTask id="startProcessing" name="startProcessing" scriptFormat="Javascript">
+      <bpmn:incoming>SequenceFlow_00pz8f2</bpmn:incoming>
+      <bpmn:outgoing>startProcessingTogateway1</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+          console.log("Just starting to process");
+          next(null, {});
+        ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:task id="ProcessImage" name="ProcessImage">
+      <bpmn:incoming>gateway2ToProcessImage</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1paw1i6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="gateway2ToProcessImage" name="gateway2ToProcessImage" sourceRef="gat" targetRef="ProcessImage" />
+    <bpmn:endEvent id="end" name="end">
+      <bpmn:incoming>SequenceFlow_1paw1i6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1paw1i6" sourceRef="ProcessImage" targetRef="end" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="gateway2">
+      <bpmndi:BPMNShape id="ParallelGateway_15py3xm_di" bpmnElement="g1">
+        <dc:Bounds x="425" y="347" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="427" y="401" width="49" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0hw1qvf_di" bpmnElement="gateway1todownloadImg">
+        <di:waypoint xsi:type="dc:Point" x="450" y="347" />
+        <di:waypoint xsi:type="dc:Point" x="450" y="239" />
+        <di:waypoint xsi:type="dc:Point" x="531" y="239" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="423" y="287" width="85" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ScriptTask_0vjw7n7_di" bpmnElement="downloadImg">
+        <dc:Bounds x="531" y="199" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_18peopb_di" bpmnElement="gate1toDownloadModule">
+        <di:waypoint xsi:type="dc:Point" x="450" y="397" />
+        <di:waypoint xsi:type="dc:Point" x="450" y="523" />
+        <di:waypoint xsi:type="dc:Point" x="507" y="523" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="424" y="454" width="83" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ScriptTask_1pfzne4_di" bpmnElement="DownloadModule">
+        <dc:Bounds x="507" y="483" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExclusiveGateway_1i5gtia_di" bpmnElement="gat" isMarkerVisible="true">
+        <dc:Bounds x="757" y="347" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="782" y="401" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1fkfjs7_di" bpmnElement="DownloadImgToGateWay2">
+        <di:waypoint xsi:type="dc:Point" x="631" y="239" />
+        <di:waypoint xsi:type="dc:Point" x="782" y="239" />
+        <di:waypoint xsi:type="dc:Point" x="782" y="347" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="686.8031914893617" y="210" width="81" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1nk65sk_di" bpmnElement="DownloadModuleToGateway2">
+        <di:waypoint xsi:type="dc:Point" x="607" y="523" />
+        <di:waypoint xsi:type="dc:Point" x="782" y="523" />
+        <di:waypoint xsi:type="dc:Point" x="782" y="397" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="690.9606299212599" y="536" width="87" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="150" y="354" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="135" y="390" width="66" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_00pz8f2_di" bpmnElement="SequenceFlow_00pz8f2">
+        <di:waypoint xsi:type="dc:Point" x="186" y="372" />
+        <di:waypoint xsi:type="dc:Point" x="223" y="372" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="204.5" y="351" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1nplqhn_di" bpmnElement="startProcessingTogateway1">
+        <di:waypoint xsi:type="dc:Point" x="323" y="372" />
+        <di:waypoint xsi:type="dc:Point" x="425" y="372" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="334" y="360" width="78" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ScriptTask_0dze2fb_di" bpmnElement="startProcessing">
+        <dc:Bounds x="223" y="332" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_14yxvfi_di" bpmnElement="ProcessImage">
+        <dc:Bounds x="972" y="332" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_0ex4amp_di" bpmnElement="gateway2ToProcessImage">
+        <di:waypoint xsi:type="dc:Point" x="807" y="372" />
+        <di:waypoint xsi:type="dc:Point" x="972" y="372" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="848.2173913043479" y="335" width="84" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_07lttcb_di" bpmnElement="end">
+        <dc:Bounds x="1117" y="354" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1125" y="394" width="21" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1paw1i6_di" bpmnElement="SequenceFlow_1paw1i6">
+        <di:waypoint xsi:type="dc:Point" x="1072" y="372" />
+        <di:waypoint xsi:type="dc:Point" x="1117" y="372" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1094.5" y="351" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

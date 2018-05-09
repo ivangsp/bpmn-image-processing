@@ -4,6 +4,7 @@ var path = require('path');
 var fs = require('fs-extra');
 const express = require('express');
 const Bpmn = require('bpmn-engine');
+const AdmZip = require('adm-zip');
 
 const currentFolder = __dirname;
 const app = express();
@@ -12,20 +13,41 @@ app.use('/', express.static(public));
 
 var request = require('request');
 
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const csvWriter = createCsvWriter({
+    path: 'timeTaken.csv',
+    header: [
+        {id: 'p1', title: 'DIST'},
+        {id: 'p2', title: 'LOCAL'},
+    ]
+});
+
+var time_p1;
+var time_p2;
+var start_time;
+var end_time;
+
+
 
 app.get('/', function(req, res){
     // send html form
     res.sendFile(path.join(public, 'form.html'));
 });
 
+app.get('/home', function(req, res){
+    // send html form
+    res.sendFile(path.join(public, 'form2.html'));
+});
+
 
 app.post('/post', function(req, res){
+    start_time = +new Date();
 
     var form = new formidable.IncomingForm();
     form.parse(req, function (err, fields, files) {
 
         // Read the file
-        readContent(files.zipfile.path, function(err, result){
+        fs.readFile(files.zipfile.path, function(err, result){
 
             // const id = Math.floor(Math.random() * 10000);
             var processXml =  result;
@@ -63,7 +85,6 @@ app.post('/post', function(req, res){
                     execution.once('end', (definition) => {
 
                         if (execution.variables.finishedDownloadingModule && execution.variables.finishedDownloadingImg) {
-                            console.log("finished downloading jimp module", new Date().getTime());
                             res.redirect("/processed-image")
                         }
 
@@ -73,6 +94,61 @@ app.post('/post', function(req, res){
 
     });
 
+});
+
+app.post('/post-zipfile', (req, res) => {
+    const t1 = +new Date();
+    const download_dir = __dirname + '/downloaded_modules';
+    var form = new formidable.IncomingForm();
+    form.parse(req, function (err, fields, files) {
+
+        // Read the file
+        fs.readFile(files.zipfile.path, function (err, result) {
+            var zip = new AdmZip(result);
+            zip.extractAllTo(download_dir, true);
+
+            var fileName;
+            // read the image from d files
+            fs.readdirSync(download_dir+'/home').forEach(file => {
+                let ext = file.split('.').pop();
+                if (ext === 'jpg' || ext === 'png' || ext === 'jpeg') {
+                    fileName = file;
+
+                }
+            });
+
+            // process the image using jimp module
+            fs.readFile(download_dir + '/home/' + fileName, function(err, data){
+                if (err) throw error;
+                var Jimp = require(download_dir+ "/home" +'/node_modules' +"/jimp");
+
+                Jimp.read(data, function (err, lenna) {
+                    if (err) throw err;
+                    lenna.resize(256, 256)
+                        .quality(60)
+                        .greyscale()
+                        .write(__dirname + "/new-image.jpg", function(err, data1){
+                            fs.removeSync(__dirname + "/downloaded_modules"+ "/home");
+                            const t2 = +new Date();
+                            time_p2 = t2 - t1;
+                            console.log('??>>>>', time_p2);
+
+                            const records = [{p1: time_p1,  p2: time_p2}];
+
+                            csvWriter.writeRecords(records)
+                            .then(() => {
+                                console.log('...Done');
+                            });
+                            res.sendFile(__dirname + "/new-image.jpg")
+                        });
+
+                });
+
+
+            });
+
+        });
+    });
 });
 
 app.get('/processed-image', function(req, res) {
@@ -87,11 +163,11 @@ app.get('/processed-image', function(req, res) {
                 .greyscale()
                 .write(__dirname + "/new.jpg", function(err, data1){
                     fs.unlink('logo2.png');
-                    // fs.unlink(__dirname + "/downloaded_modules"+ "/node_modules")
-                    // rimraf(__dirname + "/downloaded_modules"+ "/node_modules", function () {
-                    //     console.log('done');
-                    // });
                     fs.removeSync(__dirname + "/downloaded_modules"+ "/node_modules");
+
+                    end_time = +new Date();
+                    time_p1 = end_time - start_time;
+                    console.log('>>>>', time_p1);
                     res.sendFile(__dirname + "/new.jpg")
                 });
 
@@ -100,17 +176,6 @@ app.get('/processed-image', function(req, res) {
 
     });
 });
-
-function readContent(path, callback) {
-    fs.readFile(path,'utf-8', function (err, content) {
-        if (err) return callback(err)
-        callback(null, content)
-    })
-}
-
-
-
-
 
 var n = require('os').networkInterfaces()
 
@@ -128,6 +193,7 @@ var ipString = String(myIp());
 app.listen(process.env.PORT || 3000, function(){
     console.log('Server IP address:' + ipString + +':' + this.address().port, app.settings.env);
 });
+
 
 
 
